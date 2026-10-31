@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stop Chop and Roll</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23151925'/><rect x='7' y='8' width='17' height='17' rx='4' fill='%23ebe6d9' transform='rotate(-12 15.5 16.5)'/><circle cx='12' cy='13' r='2' fill='%23151925'/><circle cx='19' cy='19' r='2' fill='%23151925'/><path d='M5 27 L27 5' stroke='%23e2654f' stroke-width='3.5' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans+SC:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{
+  --bg:#151925; --panel:#1e2434; --panel2:#272f45; --line:#39425c;
+  --fg:#ebe6d9; --muted:#9ba4b9; --gold:#dba84a; --gold-dim:#8a6a2f;
+  --blue:#5592e3; --red:#e2654f; --green:#5cbf7d; --violet:#a07ae0;
+  --dmg:#ff8a73; --shd:#7fb2ff; --hea:#7be39a; --man:#c9a6ff; --blk:#7d869c;
+  --display:"Alegreya Sans SC","Trebuchet MS",sans-serif;
+  --body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{font-size:18px}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.4;min-height:100vh}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15}
+h2{font-size:1.5rem;color:var(--gold)}
+h3{font-size:1.15rem}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.hidden{display:none!important}
+button{font-family:var(--body)}
+.btn{font:700 .95rem var(--body);background:var(--gold);color:#241a06;border:0;border-radius:7px;padding:.45rem .95rem;cursor:pointer;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--panel2);color:var(--fg);border:1px solid var(--line)}
+.btn.sm{font-size:.8rem;padding:.25rem .6rem}
+.btn:disabled{opacity:.4;cursor:default;filter:none}
+.icon-btn{background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:7px;width:2.1rem;height:2.1rem;font-size:1rem;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+input{font:inherit;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:.4rem .6rem}
+.wrap{max-width:1060px;margin:0 auto;padding:12px 16px 40px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tag{display:inline-block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:var(--panel2);color:var(--muted)}
+.tag.caster{background:#3a2b5c;color:#e2d4ff}
+
+/* faces */
+.f{display:inline-flex;align-items:center;justify-content:center;gap:1px;min-width:1.9rem;height:1.6rem;padding:0 4px;border-radius:5px;background:#0f1320;border:1px solid var(--line);font-size:.8rem;font-weight:700;cursor:help}
+.f b{font-family:var(--mono);font-size:.85rem}
+.f-D{color:var(--dmg)}.f-S{color:var(--shd)}.f-H{color:var(--hea)}.f-M{color:var(--man)}.f-B{color:var(--blk)}
+.f.up{outline:2px solid var(--gold)}
+.faces{display:flex;gap:3px;flex-wrap:wrap}
+.die{width:4.3rem;height:4.3rem;border-radius:12px;background:#f1ebdc;color:#222;display:flex;align-items:center;justify-content:center;gap:2px;font-size:1.5rem;font-weight:800;border:3px solid #cfc6b0;box-shadow:0 3px 0 #9b927c;cursor:default;user-select:none;position:relative;transition:transform .12s}
+.die b{font-family:var(--mono);font-size:1.7rem}
+.die.f-D{color:#c4361f}.die.f-S{color:#2862c4}.die.f-H{color:#1f8f44}.die.f-M{color:#7440c9}.die.f-B{color:#8c8578;font-size:2.4rem}
+.die.mine{cursor:pointer}
+.die.kept{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold),0 3px 0 #9b927c;transform:translateY(-3px)}
+.die.kept::after{content:"KEPT";position:absolute;bottom:-1.25rem;font-size:.6rem;letter-spacing:.1em;color:var(--gold)}
+.die.sel{box-shadow:0 0 0 4px #fff,0 3px 0 #9b927c;transform:scale(1.06)}
+.die.used{opacity:.55}
+.die.empty{background:#252c40;border-color:var(--line);box-shadow:none;color:var(--muted);font-size:1rem}
+.die.roll{animation:roll .45s ease-out}
+@keyframes roll{0%{transform:rotate(-30deg) scale(.7)}60%{transform:rotate(12deg) scale(1.08)}100%{transform:none}}
+
+/* top bar */
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.topbar .title{font-family:var(--display);font-size:1.2rem;color:var(--gold);display:flex;align-items:center;gap:8px}
+.topbar .sp{flex:1}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:.2rem .7rem;font-size:.85rem;white-space:nowrap}
+.chip.theme{border-color:var(--gold-dim);color:var(--gold);cursor:help}
+
+/* battle */
+.side{display:grid;grid-template-columns:11rem 1fr;gap:12px;align-items:stretch}
+.sidehead{display:flex;flex-direction:column;gap:8px}
+.sidehead .nm{font-family:var(--display);font-size:1.2rem}
+.lifebox{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative}
+.lifebox .life{font-family:var(--mono);font-size:1.6rem;color:#ff9a9a;font-variant-numeric:tabular-nums}
+.lifebox .sub{font-size:.75rem;color:var(--muted)}
+.manabox{font-family:var(--mono);color:var(--man);font-size:1rem}
+.party{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.hero{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0;position:relative}
+.hero .hh{display:flex;gap:6px;align-items:center;width:100%}
+.hero .hh .ic{font-size:1.3rem}
+.hero .hh b{font-family:var(--display);font-size:1.05rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero .lv{font-size:.7rem;color:var(--gold)}
+.hpbar{width:100%;height:1.05rem;background:#0f1320;border-radius:5px;position:relative;overflow:hidden;border:1px solid var(--line)}
+.hpbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#3d9a5c,#5cbf7d);transition:width .3s}
+.hpbar span{position:relative;display:block;text-align:center;font:600 .72rem var(--mono);line-height:1rem}
+.hero.dead{opacity:.45;filter:grayscale(.8)}
+.hero.dead .die{visibility:hidden}
+.tgtline{font-size:.78rem;min-height:1.1rem;color:var(--muted);text-align:center}
+.badges{display:flex;gap:4px;min-height:1.3rem;flex-wrap:wrap;justify-content:center}
+.bdg{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:4px;background:#0f1320;border:1px solid var(--line)}
+.bdg.D{color:var(--dmg);border-color:#6b3329}.bdg.S{color:var(--shd)}.bdg.H{color:var(--hea)}
+.spellrow{min-height:1.7rem;display:flex;align-items:center}
+.spellbtn{font:700 .75rem var(--body);background:#2d2350;color:#e2d4ff;border:1px solid #5a4796;border-radius:6px;padding:.2rem .5rem;cursor:pointer}
+.spellbtn.on{background:var(--violet);color:#160d2c}
+.spellbtn:disabled{opacity:.4;cursor:default}
+.spelltxt{font-size:.75rem;color:#cdbcff}
+.itemchip{font-size:.75rem;color:var(--muted);min-height:1.1rem}
+.tg-ok{border-color:var(--gold)!important;box-shadow:0 0 0 2px var(--gold-dim);cursor:crosshair}
+.tg-ok:hover{background:#2c2a22}
+.center{margin:12px 0;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.phase{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.phase span{font-size:.8rem;padding:.2rem .6rem;border-radius:999px;background:var(--panel2);color:var(--muted)}
+.phase span.on{background:var(--gold);color:#241a06;font-weight:700}
+.hint{font-size:.9rem;color:var(--muted);max-width:44rem;min-height:1.3rem}
+.banner{background:#3a2c12;border:1px solid var(--gold-dim);color:#ffe6b0;padding:.35rem .8rem;border-radius:8px;font-size:.9rem}
+.log{max-width:760px;margin:10px auto 0}
+.log table{width:100%;border-collapse:collapse;font-size:.82rem}
+.log td,.log th{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left}
+.log th{font-family:var(--display);color:var(--muted)}
+.divider{border-top:1px dashed var(--line);margin:4px 0}
+.float{position:fixed;pointer-events:none;font:800 1.4rem var(--mono);z-index:50;animation:floatup 1.1s ease-out forwards;text-shadow:0 2px 3px #000}
+@keyframes floatup{0%{opacity:0;transform:translateY(6px)}15%{opacity:1}100%{opacity:0;transform:translateY(-38px)}}
+
+/* draft / rewards */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(12.5rem,1fr));gap:10px}
+.tile{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.tile .hh{display:flex;gap:6px;align-items:center}
+.tile .hh .ic{font-size:1.4rem}
+.tile .hh b{font-family:var(--display);font-size:1.1rem;flex:1}
+.tile.taken{opacity:.45}
+.tile .desc{font-size:.85rem;color:var(--muted);flex:1}
+.tile .btn{align-self:flex-start}
+.tile.picked{border-color:var(--gold)}
+.themecard{background:linear-gradient(160deg,#3a2c12,#1e2434 70%);border:1px solid var(--gold-dim);border-radius:10px;padding:10px 14px;max-width:22rem}
+.themecard small{display:block;color:var(--muted);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase}
+.themecard .t{font-family:var(--display);font-size:1.2rem;color:var(--gold)}
+.order{display:flex;gap:4px;flex-wrap:wrap}
+.order span{padding:2px 8px;border-radius:4px;font-size:.8rem;background:var(--panel2)}
+.order .p0{background:#25406b}.order .p1{background:#6b2c25}.order .now{outline:2px solid var(--gold)}
+.order .done{opacity:.5}
+.stack{display:flex;flex-direction:column;gap:12px}
+.slot{font-size:.8rem;padding:.25rem .55rem;border-radius:6px;border:1px dashed var(--line);background:#0f1320;cursor:pointer;color:var(--muted)}
+.slot.full{border-style:solid;color:var(--fg)}
+.slot.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-dim)}
+.facepick .f{cursor:pointer}
+.facepick .f:hover{outline:2px solid var(--gold)}
+
+/* menu */
+.menu{max-width:640px;margin:30px auto;display:flex;flex-direction:column;gap:16px;align-items:stretch}
+.logo{display:flex;justify-content:center}
+.menu .box{display:flex;flex-direction:column;gap:10px}
+.code{font:700 2.6rem var(--mono);letter-spacing:.3em;color:var(--gold);text-align:center}
+.err{color:var(--red)}
+
+/* overlay */
+.overlay{position:fixed;inset:0;background:rgba(5,7,12,.75);z-index:40;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 16px}
+.overlay .box{max-width:760px;width:100%;display:flex;flex-direction:column;gap:10px}
+.overlay table{border-collapse:collapse;font-size:.88rem}
+.overlay td,.overlay th{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+textarea{width:100%;min-height:6rem;font:.8rem var(--mono);background:#0f1320;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:8px}
+#tip{position:fixed;z-index:60;background:#0b0e16;border:1px solid var(--gold-dim);color:var(--fg);font-size:.82rem;padding:6px 9px;border-radius:7px;max-width:18rem;pointer-events:none;display:none}
+.dev{border:1px dashed #7a5;border-radius:8px;padding:4px 8px;font-size:.8rem}
+
+@media (max-width:760px){
+  .side{grid-template-columns:1fr}
+  .party{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<div id="tip"></div>
+<div id="overlay" class="overlay hidden"></div>
+
+<script>
+'use strict';
+// ================= DATA =================
+const HEROES = {
+  knight:    { name:'Knight',      icon:'🗡️', hp:8,  faces:['D3','D3','D2','S2','S2','B'] },
+  archer:    { name:'Archer',      icon:'🏹', hp:5,  faces:['D3','D2','D2','D2','D1','B'] },
+  paladin:   { name:'Paladin',     icon:'🛡️', hp:7,  faces:['S3','S2','H2','D2','D1','M1'], spell:'sanctuary' },
+  ogre:      { name:'Ogre',        icon:'👹', hp:12, faces:['D4','D4','D3','B','B','B'] },
+  cleric:    { name:'Cleric',      icon:'🕯️', hp:6,  faces:['H3','H2','H2','S1','M1','M1'], spell:'mend', caster:true },
+  rogue:     { name:'Rogue',       icon:'🥷', hp:5,  faces:['D3','D3','D2','D1','M1','B'], spell:'backstab' },
+  wizard:    { name:'Wizard',      icon:'🧙', hp:4,  faces:['M2','M2','D4','D3','M1','B'], spell:'firestorm', caster:true },
+  bard:      { name:'Bard',        icon:'🎻', hp:5,  faces:['M2','M1','H1','S1','D1','B'], spell:'anthem', caster:true },
+  monk:      { name:'Monk',        icon:'🥋', hp:6,  faces:['D2','D2','S2','H2','H1','B'] },
+  necro:     { name:'Necromancer', icon:'💀', hp:5,  faces:['D2','D2','M2','M1','H1','B'], spell:'harvest', caster:true },
+  druid:     { name:'Druid',       icon:'🌿', hp:6,  faces:['H2','S2','M2','M1','D2','B'], spell:'barkskin', caster:true },
+  berserker: { name:'Berserker',   icon:'🪓', hp:6,  faces:['D5','D3','D3','D2','D1','B'] },
+};
+const SPELLS = {
+  sanctuary:{ name:'Sanctuary',    cost:4, text:'Shield 2 on every ally hero.' },
+  mend:     { name:'Mass Mend',    cost:3, text:'Heal 2 on every ally hero.' },
+  firestorm:{ name:'Firestorm',    cost:4, text:'2 damage to every enemy hero.' },
+  backstab: { name:'Backstab',     cost:2, text:'3 damage to the enemy hero with the lowest HP.' },
+  anthem:   { name:'Anthem',       cost:3, text:'+1 to every other die you committed this turn.' },
+  harvest:  { name:'Soul Harvest', cost:3, text:'3 damage to the enemy player.' },
+  barkskin: { name:'Barkskin',     cost:3, text:'Shield 4 on your life.' },
+  spark:    { name:'Spark',        cost:2, text:'2 damage to the enemy player.' },
+};
+const ITEMS = {
+  whetstone:{ name:'Whetstone',    icon:'🔪', text:"This hero's ⚔ faces deal +1." },
+  buckler:  { name:'Buckler',      icon:'🔰', text:"This hero's blank faces become 🛡2." },
+  fang:     { name:'Vampire Fang', icon:'🦇', text:'When this hero deals damage, it heals 1 after damage.' },
+  plate:    { name:'Plate Armor',  icon:'⛓️', text:'+3 max HP.' },
+  crystal:  { name:'Mana Crystal', icon:'💎', text:"This hero's blank faces become ✦1." },
+  herb:     { name:'Healing Herb', icon:'🌱', text:"This hero's ✚ faces heal +1." },
+  tower:    { name:'Tower Shield', icon:'🧱', text:"This hero's 🛡 faces block +1." },
+  scroll:   { name:'Spark Scroll', icon:'📜', text:'This hero can cast Spark (2✦): 2 damage to the enemy player.' },
+};
+const RELICS = {
+  dice:  { name:'Lucky Dice',   icon:'🎲', text:'+1 reroll every turn.' },
+  locket:{ name:'Heart Locket', icon:'💗', text:'+3 life every round.' },
+  well:  { name:'Mana Well',    icon:'⛲', text:'Start every round with 2 ✦.' },
+};
+const THEMES = {
+  glass: { name:'Glass Bones',  text:'Every hero has −2 max HP. ⚔ faces deal +1.' },
+  thick: { name:'Thick Skin',   text:'Every hero has +3 max HP.' },
+  arcane:{ name:'Arcane Surge', text:'Every spell costs 1 less ✦ (minimum 1).' },
+  lucky: { name:'Lucky Day',    text:'3 rerolls each turn instead of 2.' },
+  short: { name:'Short Fuse',   text:'Player life is 4 lower every round.' },
+  sharp: { name:'Sharp Edges',  text:'Blank faces deal ⚔1 instead of nothing.' },
+};
+const FACE = {
+  D:{ icon:'⚔', name:'Damage', text:n=>`Deal ${n} damage to an enemy hero or the enemy player.` },
+  S:{ icon:'🛡', name:'Shield', text:n=>`Block ${n} damage to one of your heroes or your life this turn.` },
+  H:{ icon:'✚', name:'Heal',   text:n=>`Restore ${n} HP to one ally hero (after damage).` },
+  M:{ icon:'✦', name:'Mana',   text:n=>`Add ${n} mana to your party pool for this round.` },
+  B:{ icon:'✕', name:'Blank',  text:()=>'Does nothing. A level-up turns it into ⚔1.' },
+};
+const BANDS = ['The Rusty Spoons','Grimtooth Gang','The Soggy Boots','Order of the Ladle','The Pickle Knights','Moonmoss Coven','The Bent Forks','Clan Cheddarheart'];
+const RULES = { rounds:5, winTarget:3, rerolls:2, party:4 };
+const PREFIX = 'cheezy-scr-';
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const DEV = new URLSearchParams(location.search).has('dev');
+
+// ================= ENGINE =================
+// Pure-ish game state machine: act(st, player, action). The host (or the solo page) runs it;
+// guests only render the state they receive and send actions.
+function rnd(st) { let t = (st.seed = (st.seed + 0x6D2B79F5) | 0); t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+const ri = (st, n) => Math.floor(rnd(st) * n);
+function shuffle(st, a) { for (let i = a.length - 1; i > 0; i--) { const j = ri(st, i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const parse = c => ({ t: c[0], n: +c.slice(1) || 0 });
+
+function newHero(type) { return { type, bonus:0, lvl:1, faces: HEROES[type].faces.slice(), item:null, hp:0, dead:false }; }
+function maxHp(st, h) {
+  let m = HEROES[h.type].hp + h.bonus + (h.item === 'plate' ? 3 : 0);
+  if (st.theme === 'glass') m -= 2; if (st.theme === 'thick') m += 3;
+  return Math.max(1, m);
+}
+function eff(st, h, code) {   // effective face after items and theme
+  let { t, n } = parse(code);
+  if (t === 'B') {
+    if (h.item === 'buckler') { t = 'S'; n = 2; }
+    else if (h.item === 'crystal') { t = 'M'; n = 1; }
+    else if (st.theme === 'sharp') { t = 'D'; n = 1; }
+  }
+  if (t === 'D') { if (h.item === 'whetstone') n++; if (st.theme === 'glass') n++; }
+  if (t === 'H' && h.item === 'herb') n++;
+  if (t === 'S' && h.item === 'tower') n++;
+  return { t, n };
+}
+function spellsOf(h) { const s = []; if (HEROES[h.type].spell) s.push(HEROES[h.type].spell); if (h.item === 'scroll') s.push('spark'); return s; }
+const spellCost = (st, s) => Math.max(1, SPELLS[s].cost - (st.theme === 'arcane' ? 1 : 0));
+const lifeFor = (st, p) => Math.max(4, 10 + 2 * st.round - (st.theme === 'short' ? 4 : 0)) + (st.pl[p].relics.includes('locket') ? 3 : 0);
+const alive = h => !h.dead && h.hp > 0;
+const poss = n => n + (/s$/i.test(n) ? "'" : "'s");
+const heroName = (st, p, h) => h < 0 ? st.pl[p].name : `${poss(st.pl[p].name)} ${HEROES[st.pl[p].party[h].type].name}`;
+
+function newMatch(mode, names, seed) {
+  const st = { v:1, mode, seed: seed | 0, round:0, score:[0,0], phase:'draft', theme:null, pool:[], taken:{}, order:[], oi:0,
+    pl: names.map(n => ({ name:n, party:[], life:0, maxLife:0, mana:0, relics:[], bag:[], ready:false })),
+    turn:0, first:0, active:0, step:'roll', rerolls:0, dice:[[],[]], cast:[[],[]], committed:[false,false],
+    last:[], rewards:[], rorder:[], ri:0, chooser:null, starter:0, result:null, msg:'', rollN:0, resolveN:0, roundEnd:null };
+  const tids = Object.keys(THEMES); st.theme = tids[ri(st, tids.length)];
+  const types = shuffle(st, Object.keys(HEROES));
+  if (mode === 'solo') { st.pool = types.slice(0, 8); st.order = [0,0,0,0]; st.starter = 1; }
+  else { st.pool = types.slice(0, 10); const f = ri(st, 2); st.order = [f,1-f,1-f,f,f,1-f,1-f,f]; st.starter = 1 - f; }
+  return st;
+}
+
+function genEnemy(st) {   // solo: a fresh rival party each round, upgraded as many times as you have been
+  const types = shuffle(st, Object.keys(HEROES)).slice(0, RULES.party);
+  const party = types.map(newHero);
+  for (let u = 0; u < st.round - 1; u++) {
+    const h = party[ri(st, party.length)];
+    if (rnd(st) < 0.55 || h.item) {
+      const bi = h.faces.indexOf('B');
+      let fi = bi >= 0 ? bi : 0;
+      if (bi < 0) h.faces.forEach((c, i) => { if (parse(c).n > parse(h.faces[fi]).n) fi = i; });
+      h.faces[fi] = upgradeFace(st, h.faces[fi]); h.bonus += 2; h.lvl++;
+    } else {
+      const pool = Object.keys(ITEMS).filter(k => k !== 'scroll' || !HEROES[h.type].spell);
+      h.item = pool[ri(st, pool.length)];
+    }
+  }
+  st.pl[1].party = party; st.pl[1].relics = []; st.pl[1].bag = [];
+  st.pl[1].name = BANDS[(st.round - 1 + st.bandOff) % BANDS.length];
+}
+// A blank becomes ⚔1 (⚔2 under Sharp Edges, where blanks already deal 1); any other face gets +1.
+const upgradeFace = (st, c) => { const { t, n } = parse(c); return t === 'B' ? (st.theme === 'sharp' ? 'D2' : 'D1') : t + (n + 1); };
+
+function beginRound(st, replay) {
+  if (!replay) st.round++;
+  if (st.mode === 'solo') genEnemy(st);
+  for (let p = 0; p < 2; p++) {
+    const P = st.pl[p];
+    P.maxLife = P.life = lifeFor(st, p);
+    P.mana = P.relics.includes('well') ? 2 : 0;
+    P.ready = false;
+    P.party.forEach(h => { h.dead = false; h.hp = maxHp(st, h); });
+  }
+  st.phase = 'battle'; st.turn = 1; st.first = st.starter; st.last = []; st.roundEnd = null;
+  if (st.mode === 'solo') st.snap = JSON.stringify({ ...st, snap: null });
+  startTurn(st, st.first);
+}
+
+function rollFace(st, h) { return h.faces[ri(st, 6)]; }
+function startTurn(st, p) {
+  st.active = p; st.step = 'roll';
+  st.rerolls = RULES.rerolls + (st.theme === 'lucky' ? 1 : 0) + (st.pl[p].relics.includes('dice') ? 1 : 0);
+  if (p === st.first) { st.dice = [[],[]]; st.cast = [[],[]]; st.committed = [false,false]; }
+  st.dice[p] = st.pl[p].party.map(h => h.dead ? null : { c: rollFace(st, h), k:false, tg:null, r: ++st.rollN });
+  st.cast[p] = []; st.committed[p] = false;
+}
+
+function defaultTarget(st, p, h, t) {
+  if (t === 'D') return { p: 1 - p, h: -1 };
+  if (t === 'S') return { p, h: -1 };
+  if (t === 'H') {   // most missing HP after the damage the opponent already committed, on a hero that survives it
+    const inc = {};
+    if (st.committed[1 - p]) st.dice[1 - p].forEach((d, i) => { if (d && d.tg && d.tg.p === p && eff(st, st.pl[1 - p].party[i], d.c).t === 'D') inc[d.tg.h] = (inc[d.tg.h] || 0) + eff(st, st.pl[1 - p].party[i], d.c).n; });
+    let best = h, bm = -1;
+    st.pl[p].party.forEach((x, i) => { if (!alive(x)) return; const after = x.hp - (inc[i] || 0); if (after <= 0) return; const miss = maxHp(st, x) - after; if (miss > bm) { bm = miss; best = i; } });
+    return { p, h: best };
+  }
+  return null;
+}
+function validTarget(st, p, t, tg) {
+  if (!tg) return false;
+  const side = st.pl[tg.p]; if (!side) return false;
+  const heroOk = tg.h >= 0 && side.party[tg.h] && alive(side.party[tg.h]);
+  if (t === 'D') return tg.p === 1 - p && (tg.h === -1 || heroOk);
+  if (t === 'S') return tg.p === p && (tg.h === -1 || heroOk);
+  if (t === 'H') return tg.p === p && heroOk;
+  return false;
+}
+function finishRolling(st, p) {
+  st.step = 'assign';
+  st.dice[p].forEach((d, i) => {
+    if (!d) return; d.k = false;
+    const e = eff(st, st.pl[p].party[i], d.c);
+    if (e.t === 'M') { st.pl[p].mana += e.n; d.used = true; }
+    d.tg = defaultTarget(st, p, i, e.t);
+  });
+}
+
+function act(st, p, a) {
+  const P = st.pl[p];
+  switch (a.t) {
+    case 'pick': {
+      if (st.phase !== 'draft' || st.order[st.oi] !== p) return 'Not your pick';
+      if (!st.pool.includes(a.type) || st.taken[a.type] != null) return 'Hero not available';
+      st.taken[a.type] = p; P.party.push(newHero(a.type)); st.oi++;
+      if (st.oi >= st.order.length) beginRound(st);
+      return null;
+    }
+    case 'keep': case 'reroll': case 'done': case 'target': case 'cast': case 'commit': {
+      if (st.phase !== 'battle' || st.active !== p) return 'Not your turn';
+      const dice = st.dice[p];
+      if (a.t === 'keep') { if (st.step !== 'roll' || !dice[a.i]) return 'bad'; dice[a.i].k = !dice[a.i].k; return null; }
+      if (a.t === 'reroll') {
+        if (st.step !== 'roll' || st.rerolls <= 0) return 'No rerolls';
+        dice.forEach((d, i) => { if (d && !d.k) { d.c = rollFace(st, P.party[i]); d.r = ++st.rollN; } });
+        st.rerolls--;
+        if (st.rerolls === 0 || dice.every(d => !d || d.k)) finishRolling(st, p);
+        return null;
+      }
+      if (a.t === 'done') { if (st.step !== 'roll') return 'bad'; finishRolling(st, p); return null; }
+      if (st.step !== 'assign') return 'Finish rolling first';
+      if (a.t === 'target') {
+        const d = dice[a.i]; if (!d) return 'bad';
+        const e = eff(st, P.party[a.i], d.c);
+        if (!validTarget(st, p, e.t, a.tg)) return 'Invalid target';
+        d.tg = { p: a.tg.p, h: a.tg.h }; return null;
+      }
+      if (a.t === 'cast') {
+        const h = P.party[a.h]; if (!h || !alive(h) || !spellsOf(h).includes(a.s)) return 'bad';
+        const idx = st.cast[p].findIndex(c => c.h === a.h && c.s === a.s);
+        if (idx >= 0) { P.mana += spellCost(st, a.s); st.cast[p].splice(idx, 1); return null; }
+        if (P.mana < spellCost(st, a.s)) return 'Not enough mana';
+        P.mana -= spellCost(st, a.s); st.cast[p].push({ h: a.h, s: a.s }); return null;
+      }
+      if (a.t === 'commit') {
+        st.committed[p] = true;
+        if (p === st.first) startTurn(st, 1 - p); else resolve(st);
+        return null;
+      }
+      return 'bad';
+    }
+    case 'take': {
+      if (st.phase !== 'reward' || st.rorder[st.ri] !== p) return 'Not your pick';
+      const r = st.rewards[a.i]; if (!r || r.by != null) return 'Taken';
+      if (r.k === 'lvl') {
+        const h = P.party[a.h]; if (!h || !(a.f >= 0 && a.f < 6)) return 'Pick a hero and face';
+        h.faces[a.f] = upgradeFace(st, h.faces[a.f]); h.bonus += 2; h.lvl++;
+      } else if (r.k === 'item') {
+        const h = P.party[a.h]; if (!h) return 'Pick a hero';
+        if (h.item) P.bag.push(h.item); h.item = r.id;
+      } else P.relics.push(r.id);
+      r.by = p; st.ri++;
+      if (st.ri >= st.rorder.length) { st.phase = 'prep'; st.pl.forEach(x => x.ready = false); }
+      return null;
+    }
+    case 'swap': {
+      if (st.phase !== 'prep' && st.phase !== 'reward') return 'bad';
+      const get = s => s[0] === 'h' ? P.party[+s.slice(1)]?.item ?? null : P.bag[+s.slice(1)] ?? null;
+      const set = (s, v) => { if (s[0] === 'h') P.party[+s.slice(1)].item = v; else P.bag[+s.slice(1)] = v; };
+      if (a.a[0] === 'h' && !P.party[+a.a.slice(1)]) return 'bad';
+      if (a.b[0] === 'h' && !P.party[+a.b.slice(1)]) return 'bad';
+      const x = get(a.a), y = get(a.b); set(a.a, y); set(a.b, x);
+      P.bag = P.bag.filter(Boolean); return null;
+    }
+    case 'ready': {
+      if (st.phase !== 'prep') return 'bad';
+      P.ready = true;
+      if (st.mode === 'mp' && p === st.chooser && (a.starter === 0 || a.starter === 1)) st.starter = a.starter;
+      if (st.mode === 'solo') st.starter = 1;
+      if (st.mode === 'solo' || st.pl.every(x => x.ready)) beginRound(st);
+      return null;
+    }
+  }
+  return 'Unknown action';
+}
+
+function resolve(st) {
+  const lines = [], shield = {}, K = (p, h) => p + ':' + h, acts = [];
+  st.msg = '';
+  const order = [st.first, 1 - st.first];
+  const L = (p, kind, src, tgt, res) => lines.push({ p, kind, src, tgt, res });
+  for (const p of order) {
+    const anthem = st.cast[p].find(c => c.s === 'anthem');
+    st.dice[p].forEach((d, h) => {
+      if (!d) return;
+      const hero = st.pl[p].party[h], e = eff(st, hero, d.c);
+      if (e.t === 'B' || e.t === 'M') return;
+      const n = e.n + (anthem && anthem.h !== h ? 1 : 0);
+      acts.push({ p, h, t: e.t, n, tg: d.tg, src: `${heroName(st, p, h)} ${FACE[e.t].icon}${n}` });
+    });
+    st.cast[p].forEach(c => acts.push({ p, h: c.h, spell: c.s, src: `${heroName(st, p, c.h)} ✦ ${SPELLS[c.s].name}` }));
+  }
+  // 1. shields
+  for (const a of acts) {
+    if (a.t === 'S') { const k = K(a.tg.p, a.tg.h); shield[k] = (shield[k] || 0) + a.n; L(a.p, 'S', a.src, heroName(st, a.tg.p, a.tg.h), `+${a.n} shield`); }
+    if (a.spell === 'sanctuary') { st.pl[a.p].party.forEach((x, i) => { if (alive(x)) shield[K(a.p, i)] = (shield[K(a.p, i)] || 0) + 2; }); L(a.p, 'S', a.src, 'All allies', '+2 shield each'); }
+    if (a.spell === 'barkskin') { shield[K(a.p, -1)] = (shield[K(a.p, -1)] || 0) + 4; L(a.p, 'S', a.src, heroName(st, a.p, -1), '+4 shield'); }
+  }
+  // 2. damage
+  const dealt = new Set();
+  const hit = (a, tp, th, n, srcOverride) => {
+    const k = K(tp, th), b = Math.min(shield[k] || 0, n), dmg = n - b;
+    shield[k] = (shield[k] || 0) - b;
+    let res;
+    if (th < 0) { const P = st.pl[tp], before = P.life; P.life -= dmg; res = `${b ? b + ' blocked · ' : ''}${P.name} ${before} → ${Math.max(0, P.life)}`; }
+    else {
+      const x = st.pl[tp].party[th];
+      if (x.dead) { res = 'Already down'; L(a.p, 'D', srcOverride || a.src, heroName(st, tp, th), res); return; }
+      const before = x.hp; x.hp -= dmg; res = `${b ? b + ' blocked · ' : ''}${HEROES[x.type].name} ${before} → ${Math.max(0, x.hp)}${x.hp <= 0 ? ' 💀' : ''}`;
+    }
+    if (dmg > 0) dealt.add(K(a.p, a.h));
+    L(a.p, 'D', srcOverride || a.src, heroName(st, tp, th), res);
+  };
+  for (const a of acts) {
+    const o = 1 - a.p;
+    if (a.t === 'D') hit(a, a.tg.p, a.tg.h, a.n);
+    else if (a.spell === 'firestorm') st.pl[o].party.forEach((x, i) => { if (alive(x)) hit(a, o, i, 2); });
+    else if (a.spell === 'backstab') {
+      let bi = -1; st.pl[o].party.forEach((x, i) => { if (alive(x) && (bi < 0 || x.hp < st.pl[o].party[bi].hp)) bi = i; });
+      if (bi >= 0) hit(a, o, bi, 3);
+    }
+    else if (a.spell === 'harvest') hit(a, o, -1, 3);
+    else if (a.spell === 'spark') hit(a, o, -1, 2);
+  }
+  // 3. heals
+  const heal = (a, p, i, n, src) => {
+    const x = st.pl[p].party[i];
+    if (!alive(x)) { L(a.p, 'H', src, heroName(st, p, i), 'Too late: heals land after damage'); return; }
+    const before = x.hp; x.hp = Math.min(maxHp(st, x), x.hp + n);
+    L(a.p, 'H', src, heroName(st, p, i), `${HEROES[x.type].name} ${before} → ${x.hp}`);
+  };
+  for (const a of acts) {
+    if (a.t === 'H') heal(a, a.tg.p, a.tg.h, a.n, a.src);
+    if (a.spell === 'mend') st.pl[a.p].party.forEach((x, i) => { if (alive(x)) heal(a, a.p, i, 2, a.src); });
+  }
+  for (const k of dealt) {
+    const [p, h] = k.split(':').map(Number), x = st.pl[p].party[h];
+    if (x && x.item === 'fang' && alive(x)) heal({ p }, p, h, 1, `${heroName(st, p, h)} 🦇`);
+  }
+  // 4. deaths
+  for (let p = 0; p < 2; p++) st.pl[p].party.forEach(x => { if (!x.dead && x.hp <= 0) { x.dead = true; x.hp = 0; } });
+  st.last = lines; st.resolveN++; st.lastTurn = st.turn;
+  st.dice = [[],[]]; st.cast = [[],[]]; st.committed = [false,false];
+  const lost = [0, 1].map(i => st.pl[i].life <= 0 || st.pl[i].party.every(h => h.dead));
+  if (lost[0] || lost[1]) endRound(st, lost);
+  else { st.turn++; st.first = 1 - st.first; startTurn(st, st.first); }
+}
+
+function endRound(st, lost) {
+  st.msg = '';
+  if (lost[0] && lost[1]) {
+    st.roundEnd = { draw: true }; beginRound(st, true); st.msg = 'Both sides fell on the same turn. The round is replayed.'; return;
+  }
+  const w = lost[0] ? 1 : 0, l = 1 - w;
+  st.score[w]++; st.roundEnd = { w, round: st.round };
+  if (st.mode === 'solo') {
+    if (w === 1) { st.phase = 'over'; st.result = 'lost'; return; }
+    if (st.round >= RULES.rounds) { st.phase = 'over'; st.result = 'won'; return; }
+    st.rorder = [0];
+  } else {
+    if (st.score[w] >= RULES.winTarget) { st.phase = 'over'; st.result = w; return; }
+    st.rorder = [l, w]; st.chooser = l;
+  }
+  st.rewards = genRewards(st); st.ri = 0; st.phase = 'reward';
+}
+
+function genRewards(st) {
+  const out = [{ k:'lvl' }, { k:'lvl' }];
+  const owned = new Set(st.pl.flatMap(x => x.relics));
+  const relics = Object.keys(RELICS).filter(r => !owned.has(r));
+  if (relics.length && rnd(st) < 0.35) out.push({ k:'relic', id: relics[ri(st, relics.length)] });
+  const items = shuffle(st, Object.keys(ITEMS));
+  while (out.length < 5) out.push({ k:'item', id: items.pop() });
+  return shuffle(st, out).map(r => ({ ...r, by: null }));
+}
+
+// ================= AI =================
+function faceScore(st, p, h, code) {
+  const hero = st.pl[p].party[h], e = eff(st, hero, code);
+  if (e.t === 'D') return e.n;
+  if (e.t === 'S') return e.n * 0.7;
+  if (e.t === 'H') return e.n * 0.6;
+  if (e.t === 'M') return st.pl[p].party.some(x => alive(x) && spellsOf(x).length) ? e.n * 0.9 : 0.1;
+  return 0;
+}
+function threat(st, p, h) { const x = st.pl[p].party[h]; return x.faces.reduce((s, c) => s + faceScore(st, p, h, c), 0) / 6; }
+
+function aiDraftPick(st, p) {
+  let best = null, bs = -1;
+  for (const t of st.pool) {
+    if (st.taken[t] != null) continue;
+    const H = HEROES[t];
+    const s = H.faces.reduce((a, c) => a + ({ D:1, S:.7, H:.6, M:.6, B:0 })[c[0]] * (+c.slice(1) || 0), 0) + H.hp * 0.4 + (H.spell ? 2 : 0) + rnd(st) * 2;
+    if (s > bs) { bs = s; best = t; }
+  }
+  return best;
+}
+
+function aiPlan(st, p) {
+  const o = 1 - p, me = st.pl[p], op = st.pl[o], K = (q, h) => q + ':' + h;
+  const known = st.committed[o];
+  const inc = {}, oppSh = {};
+  const add = (m, k, n) => m[k] = (m[k] || 0) + n;
+  if (known) {
+    const anthem = st.cast[o].find(c => c.s === 'anthem');
+    st.dice[o].forEach((d, h) => {
+      if (!d) return; const e = eff(st, op.party[h], d.c), n = e.n + (anthem && anthem.h !== h && e.t !== 'M' ? 1 : 0);
+      if (e.t === 'D') add(inc, K(d.tg.p, d.tg.h), n);
+      if (e.t === 'S') add(oppSh, K(d.tg.p, d.tg.h), n);
+    });
+    st.cast[o].forEach(c => {
+      if (c.s === 'firestorm') me.party.forEach((x, i) => alive(x) && add(inc, K(p, i), 2));
+      if (c.s === 'harvest') add(inc, K(p, -1), 3);
+      if (c.s === 'spark') add(inc, K(p, -1), 2);
+      if (c.s === 'sanctuary') op.party.forEach((x, i) => alive(x) && add(oppSh, K(o, i), 2));
+      if (c.s === 'barkskin') add(oppSh, K(o, -1), 4);
+    });
+  }
+  const dice = st.dice[p], tg = dice.map(() => null);
+  const byType = t => dice.map((d, i) => d ? { i, e: eff(st, me.party[i], d.c) } : null).filter(x => x && x.e.t === t).sort((a, b) => b.e.n - a.e.n);
+  // spells (budget = current pool plus refunds of anything already cast)
+  let mana = me.mana + st.cast[p].reduce((s, c) => s + spellCost(st, c.s), 0);
+  const enemyAlive = op.party.filter(alive).length;
+  const missing = me.party.reduce((s, x, i) => s + (alive(x) ? Math.min(maxHp(st, x), maxHp(st, x) - x.hp + (inc[K(p, i)] || 0)) : 0), 0);
+  const dieCount = dice.filter((d, i) => d && 'DSH'.includes(eff(st, me.party[i], d.c).t)).length;
+  const value = s => ({ firestorm: enemyAlive * 2, harvest: 3, spark: 2, backstab: enemyAlive ? 3 : 0, mend: Math.min(missing, me.party.filter(alive).length * 2),
+    sanctuary: known ? Math.min(6, me.party.reduce((a, x, i) => a + (alive(x) ? Math.min(2, inc[K(p, i)] || 0) : 0), 0)) : 3,
+    barkskin: known ? Math.min(4, inc[K(p, -1)] || 0) : 2.5, anthem: Math.max(0, dieCount - 1) })[s] || 0;
+  const cands = [];
+  me.party.forEach((x, i) => { if (alive(x)) spellsOf(x).forEach(s => cands.push({ h: i, s, v: value(s), c: spellCost(st, s) })); });
+  cands.sort((a, b) => b.v / b.c - a.v / a.c);
+  const casts = [];
+  for (const c of cands) if (c.v >= 2 && c.c <= mana) { mana -= c.c; casts.push({ h: c.h, s: c.s }); }
+  const fire = casts.some(c => c.s === 'firestorm');
+  // shields: save heroes about to die, else cover life
+  const shLeft = Object.assign({}, inc);
+  for (const { i, e } of byType('S')) {
+    let best = K(p, -1);
+    if (known) {
+      let bv = Math.min(e.n, shLeft[K(p, -1)] || 0);
+      me.party.forEach((x, h) => {
+        if (!alive(x)) return; const k = K(p, h), inn = shLeft[k] || 0;
+        const saves = inn >= x.hp && inn - e.n < x.hp ? 5 : 0, v = Math.min(e.n, inn) + saves;
+        if (v > bv) { bv = v; best = k; }
+      });
+    }
+    shLeft[best] = Math.max(0, (shLeft[best] || 0) - e.n);
+    const [, hh] = best.split(':').map(Number); tg[i] = { p, h: hh };
+  }
+  // heals: most missing HP on a hero that will survive the damage
+  for (const { i, e } of byType('H')) {
+    let best = -1, bv = -1;
+    me.party.forEach((x, h) => {
+      if (!alive(x)) return; const after = x.hp - (shLeft[K(p, h)] || 0);
+      if (after <= 0) return; const miss = maxHp(st, x) - after;
+      if (miss > bv) { bv = miss; best = h; }
+    });
+    if (best < 0) best = me.party.findIndex(alive);
+    tg[i] = { p, h: best };
+  }
+  // damage: lethal on life if possible, else finish heroes, else race
+  const D = byType('D');
+  const lifeDmg = D.reduce((s, x) => s + x.e.n, 0) + casts.reduce((s, c) => s + (c.s === 'harvest' ? 3 : c.s === 'spark' ? 2 : 0), 0);
+  const lethal = lifeDmg >= op.life + (oppSh[K(o, -1)] || 0);
+  const assigned = {};
+  for (const { i, e } of D) {
+    let pick = -1;
+    if (!lethal) {
+      let bt = -1;
+      op.party.forEach((x, h) => {
+        if (!alive(x)) return;
+        const need = x.hp + (oppSh[K(o, h)] || 0) - (assigned[h] || 0) - (fire ? 2 : 0);
+        if (need > 0 && need <= e.n) { const t = threat(st, o, h); if (t > bt) { bt = t; pick = h; } }
+      });
+    }
+    if (pick >= 0) assigned[pick] = (assigned[pick] || 0) + e.n;
+    tg[i] = { p: o, h: pick };
+  }
+  return { tg, casts };
+}
+
+function aiNext(st, p) {
+  if (st.phase === 'draft' && st.order[st.oi] === p) return { t:'pick', type: aiDraftPick(st, p) };
+  if (st.phase === 'battle' && st.active === p) {
+    const dice = st.dice[p];
+    if (st.step === 'roll') {
+      const want = dice.map((d, i) => {
+        if (!d) return false;
+        const sc = faceScore(st, p, i, d.c), faces = st.pl[p].party[i].faces;
+        const avg = faces.reduce((s, c) => s + faceScore(st, p, i, c), 0) / 6;
+        return sc > 0 && sc >= avg;
+      });
+      const tog = dice.findIndex((d, i) => d && d.k !== want[i]);
+      if (tog >= 0) return { t:'keep', i: tog };
+      if (st.rerolls > 0 && want.some((w, i) => dice[i] && !w)) return { t:'reroll' };
+      return { t:'done' };
+    }
+    const plan = aiPlan(st, p);
+    for (let i = 0; i < dice.length; i++) {
+      const d = dice[i], g = plan.tg[i];
+      if (d && g && (d.tg?.p !== g.p || d.tg?.h !== g.h) && validTarget(st, p, eff(st, st.pl[p].party[i], d.c).t, g)) return { t:'target', i, tg: g };
+    }
+    for (const c of st.cast[p]) if (!plan.casts.some(x => x.h === c.h && x.s === c.s)) return { t:'cast', h: c.h, s: c.s };
+    for (const c of plan.casts) if (!st.cast[p].some(x => x.h === c.h && x.s === c.s) && st.pl[p].mana >= spellCost(st, c.s)) return { t:'cast', h: c.h, s: c.s };
+    return { t:'commit' };
+  }
+  if (st.phase === 'prep' && !st.pl[p].ready && st.mode !== 'solo') return { t:'ready', starter: p };
+  return null;
+}
+
+// ================= AUDIO =================
+let actx = null, master = null, musicGain = null;
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} }, del(k) { try { localStorage.removeItem(k); } catch {} } };
+let muted = store.get('scr-mute') === '1', musicOn = store.get('scr-music') !== '0';
+function ac() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+    master = actx.createGain(); master.connect(actx.destination); musicGain = actx.createGain(); musicGain.connect(master); applyVol(); }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function applyVol() { if (!master) return; master.gain.value = muted ? 0 : 0.8; musicGain.gain.value = musicOn ? 0.18 : 0; }
+function tone(f, d, type = 'sine', vol = .15, slide = 0, delay = 0, dest) {
+  const a = ac(); if (!a || muted) return;
+  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+  o.connect(g).connect(dest || master); o.start(t); o.stop(t + d + .02);
+}
+function noise(d, vol = .2, freq = 1800, delay = 0) {
+  const a = ac(); if (!a || muted) return;
+  const t = a.currentTime + delay, len = Math.floor(a.sampleRate * d), buf = a.createBuffer(1, len, a.sampleRate), ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = buf; f.type = 'bandpass'; f.frequency.value = freq; g.gain.value = vol;
+  s.connect(f).connect(g).connect(master); s.start(t);
+}
+const sfx = {
+  roll() { for (let i = 0; i < 5; i++) noise(.04, .25, 2200 + Math.random() * 1500, i * .05 + Math.random() * .02); },
+  click() { tone(660, .05, 'square', .05); },
+  hit() { tone(140, .18, 'sawtooth', .14, -80); noise(.08, .2, 600); },
+  shield() { tone(880, .12, 'triangle', .08); tone(1320, .15, 'triangle', .05, 0, .03); },
+  heal() { tone(520, .15, 'sine', .1, 200); tone(780, .2, 'sine', .07, 200, .08); },
+  mana() { [988, 1319, 1568].forEach((f, i) => tone(f, .12, 'sine', .06, 0, i * .05)); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, 'triangle', .12, 0, i * .12)); },
+  lose() { [392, 349, 311, 262].forEach((f, i) => tone(f, .3, 'triangle', .12, 0, i * .15)); },
+  pick() { tone(440, .08, 'triangle', .1); tone(660, .1, 'triangle', .08, 0, .06); },
+  join() { tone(600, .1, 'sine', .12); tone(900, .14, 'sine', .1, 0, .1); },
+};
+// Gentle tavern loop: plucked chords on a 2-second bar, scheduled ahead.
+const PROG = [[220, 277, 330], [196, 247, 294], [175, 220, 262], [196, 247, 294]];
+let musicT = 0, musicBar = 0;
+setInterval(() => {
+  if (!actx || muted || !musicOn) return;
+  if (musicT < actx.currentTime) musicT = actx.currentTime + .05;
+  while (musicT < actx.currentTime + .6) {
+    const ch = PROG[musicBar % PROG.length];
+    [0, 1, 2, 1, 2, 1, 0, 2].forEach((ni, k) => tone(ch[ni] * (k === 4 ? 2 : 1), .5, 'triangle', .22, 0, musicT - actx.currentTime + k * .25, musicGain));
+    tone(ch[0] / 2, 1.8, 'sine', .25, 0, musicT - actx.currentTime, musicGain);
+    musicT += 2; musicBar++;
+  }
+}, 300);
+
+// ================= APP STATE =================
+let st = null, me = 0, screen = 'menu', aiTimer = null;
+const ui = { sel: null, pend: null, swapSel: null, err: '', joinCode: '' };
+const net = { peer: null, role: null, code: '', conn: null };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const myName = () => (store.get('scr-name') || 'Player').slice(0, 14);
+
+function dispatch(a) {
+  ac();
+  if (net.role === 'client') { if (net.conn && net.conn.open) net.conn.send({ t:'act', a }); return; }
+  if (!st) return;
+  const err = act(st, me, a);
+  if (err) { ui.err = err; render(); return; }
+  ui.err = '';
+  afterChange();
+}
+function afterChange() {
+  if (st.mode === 'solo') saveSolo();
+  if (net.role === 'host') sendState();
+  render();
+  scheduleAI();
+}
+function scheduleAI() {
+  clearTimeout(aiTimer);
+  if (!st || st.mode !== 'solo') return;
+  const a = aiNext(st, 1);
+  if (!a) return;
+  const delay = { keep: 260, reroll: 650, done: 500, target: 350, cast: 450, commit: 700, pick: 500 }[a.t] || 400;
+  aiTimer = setTimeout(() => { if (!st) return; const e = act(st, 1, a); if (e) { console.warn('AI action failed', a, e); return; } afterChange(); }, delay);
+}
+
+// ================= SAVE =================
+const SAVE_KEY = 'scr-solo-v1';
+function saveSolo() { if (st && st.mode === 'solo') store.set(SAVE_KEY, JSON.stringify(st)); }
+function exportSave() { const s = store.get(SAVE_KEY); return s ? 'SCR1:' + btoa(unescape(encodeURIComponent(s))) : ''; }
+function importSave(txt) {
+  txt = txt.trim(); if (!txt.startsWith('SCR1:')) throw new Error('Not a Stop Chop and Roll save');
+  const s = JSON.parse(decodeURIComponent(escape(atob(txt.slice(5)))));
+  if (!s || s.mode !== 'solo' || !s.pl) throw new Error('Save looks broken');
+  store.set(SAVE_KEY, JSON.stringify(s));
+}
+
+// ================= NETWORK =================
+function randCode() { let c = ''; for (let i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return c; }
+function publicState() { const { seed, snap, ...rest } = st; return rest; }
+function sendState() { if (net.conn && net.conn.open) net.conn.send({ t:'state', s: publicState() }); }
+function startHost(tries = 0) {
+  if (!window.Peer) { ui.err = 'Could not load the PeerJS library. Check your internet connection.'; render(); return; }
+  const code = randCode();
+  net.myName = myName();
+  screen = 'lobby'; ui.err = ''; ui.lobbyMsg = 'Contacting the PeerJS broker…'; render();
+  const peer = new Peer(PREFIX + code, { debug: 1 });
+  net.peer = peer;
+  peer.on('open', () => { net.role = 'host'; net.code = code; ui.lobbyMsg = 'Waiting for a friend to join…'; render(); });
+  peer.on('connection', conn => {
+    conn.on('open', () => { if (net.conn && net.conn.open) { conn.send({ t:'full' }); setTimeout(() => conn.close(), 300); return; } net.conn = conn; });
+    conn.on('data', d => hostOnData(conn, d));
+    conn.on('close', () => { if (net.conn === conn) endSession('Your friend left the game.'); });
+  });
+  peer.on('error', e => {
+    if (net.peer !== peer) return;
+    if (e.type === 'unavailable-id' && tries < 5) { peer.destroy(); startHost(tries + 1); return; }
+    netError(e);
+  });
+  peer.on('disconnected', () => { if (net.peer === peer && net.role === 'host') peer.reconnect(); });
+}
+function hostOnData(conn, d) {
+  if (conn !== net.conn) return;
+  if (d.t === 'hello') {
+    st = newMatch('mp', [net.myName || myName(), String(d.name || 'Friend').slice(0, 14)], (Math.random() * 2 ** 31) | 0);
+    me = 0; screen = 'game'; sfx.join(); afterChange();
+  } else if (d.t === 'act' && st) {
+    const err = act(st, 1, d.a);
+    if (err) { conn.send({ t:'err', msg: err }); return; }
+    afterChange();
+  } else if (d.t === 'rematch' && st && st.phase === 'over') hostRematch();
+}
+function hostRematch() { st = newMatch('mp', [st.pl[0].name, st.pl[1].name], (Math.random() * 2 ** 31) | 0); afterChange(); }
+function startJoin(code) {
+  code = (code || '').trim().toUpperCase();
+  if (!/^[A-Z]{4}$/.test(code)) { ui.err = 'Enter the 4-letter room code.'; render(); return; }
+  if (!window.Peer) { ui.err = 'Could not load the PeerJS library. Check your internet connection.'; render(); return; }
+  screen = 'lobby'; ui.err = ''; ui.lobbyMsg = 'Contacting the PeerJS broker…'; render();
+  const peer = new Peer({ debug: 1 });
+  net.peer = peer;
+  peer.on('open', () => {
+    ui.lobbyMsg = `Connecting to room ${code}…`; render();
+    const conn = peer.connect(PREFIX + code, { serialization:'json', reliable:true });
+    net.conn = conn; net.code = code;
+    net.joinTimer = setTimeout(() => { if (net.peer === peer && !conn.open) netError({ type:'timeout', message:'Could not reach the host. Their network (or yours) may block direct connections.' }); }, 15000);
+    conn.on('open', () => { clearTimeout(net.joinTimer); net.role = 'client'; me = 1; conn.send({ t:'hello', name: myName() }); ui.lobbyMsg = 'Connected. Waiting for the host…'; render(); });
+    conn.on('data', d => {
+      if (d.t === 'state') { const first = !st; st = d.s; screen = 'game'; ui.err = ''; if (first) sfx.join(); render(); }
+      else if (d.t === 'full') endSession('That room already has two players.');
+      else if (d.t === 'err') { ui.err = d.msg; render(); }
+    });
+    conn.on('close', () => { if (net.peer === peer) endSession('The host left, so the game ended.'); });
+  });
+  peer.on('error', e => { if (net.peer === peer) netError(e); });
+}
+function netError(e) {
+  const msgs = { 'peer-unavailable':'Room not found. Check the code, and make sure the host still has the game open.', 'network':'Could not reach the PeerJS broker. Check your internet connection.', 'browser-incompatible':'This browser does not support WebRTC.', 'server-error':'The PeerJS broker had a problem. Try again in a moment.' };
+  endSession(msgs[e.type] || e.message || String(e.type));
+}
+function teardown() {
+  clearTimeout(net.joinTimer);
+  if (net.peer) { try { net.peer.destroy(); } catch {} }
+  Object.assign(net, { peer:null, role:null, code:'', conn:null });
+}
+function endSession(msg) { teardown(); clearTimeout(aiTimer); st = null; me = 0; screen = 'menu'; ui.err = msg || ''; render(); }
+
+// ================= RENDER HELPERS =================
+function faceHtml(st, h, code, extra = '', attrs = '') {
+  const e = eff(st, h, code), F = FACE[e.t];
+  const changed = e.t !== code[0] || e.n !== parse(code).n;
+  const tip = `${F.name}${e.t === 'B' ? '' : ' ' + e.n}: ${F.text(e.n)}${changed ? ' (changed by an item or the theme)' : ''}`;
+  return `<span class="f f-${e.t} ${extra}" tabindex="0" data-tip="${esc(tip)}" ${attrs}>${F.icon}${e.t === 'B' ? '' : `<b>${e.n}</b>`}</span>`;
+}
+function rawFaceHtml(code, extra = '', attrs = '') {
+  const { t, n } = parse(code), F = FACE[t];
+  return `<span class="f f-${t} ${extra}" tabindex="0" data-tip="${esc(`${F.name}${t === 'B' ? '' : ' ' + n}: ${F.text(n)}`)}" ${attrs}>${F.icon}${t === 'B' ? '' : `<b>${n}</b>`}</span>`;
+}
+const spellTip = (st, s) => `${SPELLS[s].name} (${spellCost(st, s)}✦): ${SPELLS[s].text}`;
+const who = p => p === me ? 'You' : esc(st.pl[p].name);
+const whose = (p, h) => `${p === me ? 'your' : esc(poss(st.pl[p].name))} ${h < 0 ? 'life' : HEROES[st.pl[p].party[h].type].name}`;
+const color = p => p === me ? 'var(--blue)' : 'var(--red)';
+
+function previewMap() {   // planned shields/damage/heals per target from every die with a target
+  const m = {}, K = (p, h) => p + ':' + h, add = (k, t, n) => { m[k] = m[k] || { D:0, S:0, H:0 }; m[k][t] += n; };
+  for (let p = 0; p < 2; p++) {
+    if (st.phase !== 'battle') break;
+    const anthem = st.cast[p].find(c => c.s === 'anthem');
+    (st.dice[p] || []).forEach((d, h) => {
+      if (!d || !d.tg) return; const e = eff(st, st.pl[p].party[h], d.c);
+      if ('DSH'.includes(e.t)) add(K(d.tg.p, d.tg.h), e.t, e.n + (anthem && anthem.h !== h ? 1 : 0));
+    });
+    const o = 1 - p;
+    st.cast[p].forEach(c => {
+      if (c.s === 'firestorm') st.pl[o].party.forEach((x, i) => alive(x) && add(K(o, i), 'D', 2));
+      if (c.s === 'harvest') add(K(o, -1), 'D', 3);
+      if (c.s === 'spark') add(K(o, -1), 'D', 2);
+      if (c.s === 'sanctuary') st.pl[p].party.forEach((x, i) => alive(x) && add(K(p, i), 'S', 2));
+      if (c.s === 'barkskin') add(K(p, -1), 'S', 4);
+      if (c.s === 'mend') st.pl[p].party.forEach((x, i) => alive(x) && add(K(p, i), 'H', 2));
+    });
+  }
+  return m;
+}
+function badges(m) {
+  if (!m) return '';
+  return (m.D ? `<span class="bdg D">⚔${m.D} incoming</span>` : '') + (m.S ? `<span class="bdg S">🛡${m.S}</span>` : '') + (m.H ? `<span class="bdg H">✚${m.H}</span>` : '');
+}
+function canTarget(p, h) {
+  if (ui.sel == null || st.phase !== 'battle' || st.active !== me || st.step !== 'assign') return false;
+  const d = st.dice[me][ui.sel]; if (!d) return false;
+  return validTarget(st, me, eff(st, st.pl[me].party[ui.sel], d.c).t, { p, h });
+}
+
+function heroCard(p, h, pm) {
+  const x = st.pl[p].party[h], H = HEROES[x.type], mx = maxHp(st, x);
+  const d = st.phase === 'battle' ? (st.dice[p] || [])[h] : null;
+  const mine = p === me, myTurn = st.phase === 'battle' && st.active === me && mine;
+  let die;
+  if (d) {
+    const e = eff(st, x, d.c), F = FACE[e.t];
+    const cls = ['die', 'f-' + e.t, myTurn ? 'mine' : '', d.k ? 'kept' : '', myTurn && ui.sel === h ? 'sel' : '', d.used ? 'used' : '', (renderCache.roll[p + ':' + h] !== d.r) ? 'roll' : ''].join(' ');
+    renderCache.rollNext[p + ':' + h] = d.r;
+    die = `<div class="${cls}" data-die="${h}" data-p="${p}" tabindex="0" data-tip="${esc(`${F.name}${e.t === 'B' ? '' : ' ' + e.n}: ${F.text(e.n)}`)}">${F.icon}${e.t === 'B' ? '' : `<b>${e.n}</b>`}</div>`;
+  } else die = `<div class="die empty">${x.dead ? '' : (st.phase === 'battle' ? '…' : '')}</div>`;
+  let tl = '';
+  if (d && d.tg) { const e = eff(st, x, d.c); tl = `${FACE[e.t].icon} → ${whose(d.tg.p, d.tg.h)}`; }
+  else if (d && d.used) tl = `+${eff(st, x, d.c).n} mana`;
+  else if (d && st.step === 'roll' && st.active === p) tl = d.k ? 'kept' : '';
+  const spells = spellsOf(x).map(s => {
+    const on = st.phase === 'battle' && st.cast[p].some(c => c.h === h && c.s === s);
+    const can = myTurn && st.step === 'assign' && alive(x) && (on || st.pl[me].mana >= spellCost(st, s));
+    if (mine && st.phase === 'battle') return `<button class="spellbtn ${on ? 'on' : ''}" data-cast="${h}" data-s="${s}" ${can ? '' : 'disabled'} data-tip="${esc(spellTip(st, s))}">✦ ${SPELLS[s].name} ${spellCost(st, s)}</button>`;
+    return `<span class="spelltxt ${on ? '' : ''}" data-tip="${esc(spellTip(st, s))}">${on ? '<b>CASTING</b> ' : '✦ '}${SPELLS[s].name} ${spellCost(st, s)}</span>`;
+  }).join(' ') || '<span class="muted" style="font-size:.75rem">No spell</span>';
+  const tgt = canTarget(p, h) ? 'tg-ok' : '';
+  return `<div class="hero ${x.dead ? 'dead' : ''} ${tgt}" data-tp="${p}" data-th="${h}" data-key="${p}:${h}">
+    <div class="hh"><span class="ic">${H.icon}</span><b>${H.name}</b>${x.lvl > 1 ? `<span class="lv">Lv${x.lvl}</span>` : ''}</div>
+    <div class="hpbar"><i style="width:${Math.max(0, x.hp) / mx * 100}%"></i><span>${x.dead ? 'Down' : `${x.hp} / ${mx}`}</span></div>
+    ${die}
+    <div class="tgtline">${tl}</div>
+    <div class="badges">${badges(pm[p + ':' + h])}</div>
+    <div class="faces">${x.faces.map(c => faceHtml(st, x, c)).join('')}</div>
+    <div class="spellrow">${spells}</div>
+    <div class="itemchip">${x.item ? `<span data-tip="${esc(ITEMS[x.item].text)}">${ITEMS[x.item].icon} ${ITEMS[x.item].name}</span>` : ''}</div>
+  </div>`;
+}
+const renderCache = { roll: {}, rollNext: {}, vals: {}, sig: null };
+
+function sideHtml(p, pm) {
+  const P = st.pl[p], tgt = canTarget(p, -1) ? 'tg-ok' : '';
+  const relics = P.relics.map(r => `<span data-tip="${esc(RELICS[r].name + ': ' + RELICS[r].text)}">${RELICS[r].icon}</span>`).join(' ');
+  return `<div class="side">
+    <div class="sidehead">
+      <div class="nm" style="color:${color(p)}">${p === me ? 'You' : esc(P.name)}</div>
+      <div class="lifebox ${tgt}" data-tp="${p}" data-th="-1" data-key="${p}:L" data-tip="Player life. When it hits 0 you lose the round.">
+        <span class="life">♥ ${Math.max(0, P.life)}<span class="muted" style="font-size:.9rem"> / ${P.maxLife}</span></span>
+        <div class="badges" style="justify-content:flex-start">${badges(pm[p + ':-1'])}</div>
+      </div>
+      <div class="manabox" data-tip="Party mana. Mana faces add to it; spells spend it. Resets each round.">✦ ${P.mana} mana</div>
+      ${relics ? `<div>${relics}</div>` : ''}
+    </div>
+    <div class="party">${P.party.map((_, h) => heroCard(p, h, pm)).join('')}</div>
+  </div>`;
+}
+
+function topbar() {
+  const t = THEMES[st.theme];
+  const score = st.mode === 'solo' ? `<span class="chip">Wave ${Math.max(1, st.round)} of ${RULES.rounds}</span>` : `<span class="chip">Round ${Math.max(1, st.round)} · <b style="color:var(--blue)">You ${st.score[me]}</b> – <b style="color:var(--red)">${st.score[1 - me]} ${esc(st.pl[1 - me].name)}</b> · first to ${RULES.winTarget}</span>`;
+  const dev = DEV && net.role !== 'client' && st.phase === 'battle' ? `<span class="dev">Dev: <button class="btn sm ghost" data-dev="win">Win round</button> <button class="btn sm ghost" data-dev="lose">Lose round</button> <button class="btn sm ghost" data-dev="mana">+5 ✦</button></span>` : '';
+  return `<div class="topbar">
+    <div class="title">${logoSvg(30)} Stop Chop and Roll</div>
+    ${score}
+    <span class="chip theme" data-tip="${esc(t.text)}">Theme: ${t.name}</span>
+    ${dev}
+    <span class="sp"></span>
+    <button class="icon-btn" data-ui="help" aria-label="Help" data-tip="How to play">?</button>
+    <button class="icon-btn" data-ui="music" aria-label="Music" data-tip="Music on/off">${musicOn ? '🎵' : '🎶'}</button>
+    <button class="icon-btn" data-ui="mute" aria-label="Mute" data-tip="Sound on/off">${muted ? '🔇' : '🔊'}</button>
+    <button class="btn ghost sm" data-ui="leave">Leave</button>
+  </div>`;
+}
+
+// ================= SCREENS =================
+function render() {
+  const app = $('app');
+  if (screen === 'menu') app.innerHTML = menuHtml();
+  else if (screen === 'lobby') app.innerHTML = lobbyHtml();
+  else if (st) {
+    const body = { draft: draftHtml, battle: battleHtml, reward: rewardHtml, prep: prepHtml, over: overHtml }[st.phase]();
+    app.innerHTML = topbar() + (ui.err ? `<div class="banner err" style="margin-bottom:8px">${esc(ui.err)}</div>` : '') + body;
+  }
+  postRender();
+}
+
+function postRender() {
+  if (!st || screen !== 'game') { renderCache.vals = {}; renderCache.sig = null; return; }
+  // sounds from state changes (works the same for host, guest and solo)
+  const sig = { rollN: st.rollN, resolveN: st.resolveN, phase: st.phase };
+  const prev = renderCache.sig;
+  if (prev) {
+    if (sig.rollN !== prev.rollN) sfx.roll();
+    if (sig.resolveN !== prev.resolveN) {
+      const kinds = new Set(st.last.map(l => l.kind));
+      if (kinds.has('S')) sfx.shield(); if (kinds.has('D')) setTimeout(sfx.hit, 120); if (kinds.has('H')) setTimeout(sfx.heal, 300);
+    }
+    if (sig.phase !== prev.phase && sig.phase === 'over') (st.result === 'won' || st.result === me) ? sfx.win() : sfx.lose();
+    else if (sig.phase !== prev.phase && sig.phase === 'reward') sfx.win();
+  }
+  renderCache.sig = sig;
+  Object.assign(renderCache.roll, renderCache.rollNext);
+  // floating numbers for HP / life changes
+  const vals = {};
+  st.pl.forEach((P, p) => { vals[p + ':L'] = P.life; P.party.forEach((x, h) => vals[p + ':' + h] = x.hp); });
+  if (st.phase === 'battle' || st.phase === 'over' || st.phase === 'reward') {
+    for (const k in vals) {
+      const old = renderCache.vals[k];
+      if (old == null || old === vals[k] || st.phase === 'battle' && st.turn === 1 && !st.last.length) continue;
+      const el = document.querySelector(`[data-key="${k}"]`); if (!el) continue;
+      const r = el.getBoundingClientRect(), f = document.createElement('div'), dv = vals[k] - old;
+      f.className = 'float'; f.textContent = (dv > 0 ? '+' : '') + dv; f.style.color = dv > 0 ? 'var(--hea)' : 'var(--dmg)';
+      f.style.left = (r.left + r.width / 2 - 14) + 'px'; f.style.top = (r.top + 30) + 'px';
+      document.body.appendChild(f); setTimeout(() => f.remove(), 1200);
+    }
+  }
+  renderCache.vals = vals;
+}
+
+function menuHtml() {
+  const hasSave = !!store.get(SAVE_KEY);
+  return `<div class="menu">
+    <div class="logo">${logoBig()}</div>
+    <p class="muted" style="text-align:center;margin:0">A dice-hero duel. Draft a party, roll, reroll, and chop your rival's life to zero.</p>
+    ${ui.err ? `<div class="banner err">${esc(ui.err)}</div>` : ''}
+    <div class="box">
+      <h3>Single player</h3>
+      <p class="muted" style="margin:0">Pick 4 heroes, then beat 5 rival parties in a row. Pick a reward after every win.</p>
+      <div class="row">
+        <button class="btn" data-ui="solo">New run</button>
+        ${hasSave ? '<button class="btn ghost" data-ui="continue">Continue run</button>' : ''}
+        <button class="btn ghost sm" data-ui="export" ${hasSave ? '' : 'disabled'}>Export save</button>
+        <button class="btn ghost sm" data-ui="import">Import save</button>
+      </div>
+    </div>
+    <div class="box">
+      <h3>Duel a friend</h3>
+      <p class="muted" style="margin:0">One player hosts and shares a 4-letter code. Best of 5 rounds, first to 3.</p>
+      <div class="row"><label class="muted" for="nameIn">Your name</label><input id="nameIn" maxlength="14" value="${esc(myName())}" style="width:10rem"></div>
+      <div class="row">
+        <button class="btn" data-ui="host">Host a duel</button>
+        <input id="codeIn" maxlength="4" placeholder="CODE" style="width:6rem;text-transform:uppercase;font-family:var(--mono)" value="${esc(ui.joinCode)}">
+        <button class="btn ghost" data-ui="join">Join</button>
+      </div>
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn ghost sm" data-ui="help">How to play</button>
+      <button class="icon-btn" data-ui="music" aria-label="Music">${musicOn ? '🎵' : '🎶'}</button>
+      <button class="icon-btn" data-ui="mute" aria-label="Mute">${muted ? '🔇' : '🔊'}</button>
+    </div>
+  </div>`;
+}
+function lobbyHtml() {
+  return `<div class="menu"><div class="logo">${logoBig()}</div><div class="box" style="align-items:center;text-align:center">
+    ${net.role === 'host' ? `<p class="muted" style="margin:0">Room code. Send it to your friend.</p><div class="code">${net.code}</div>` : ''}
+    <p>${esc(ui.lobbyMsg || '')}</p>
+    <button class="btn ghost" data-ui="leave">Cancel</button>
+  </div></div>`;
+}
+
+function draftHtml() {
+  const myPick = st.order[st.oi] === me;
+  const t = THEMES[st.theme];
+  const orderHtml = st.order.map((p, i) => `<span class="${p === me ? 'p0' : 'p1'} ${i === st.oi ? 'now' : ''} ${i < st.oi ? 'done' : ''}">${p === me ? 'You' : esc(st.pl[p].name)}</span>`).join('');
+  const tiles = st.pool.map(type => {
+    const H = HEROES[type], tk = st.taken[type];
+    const fake = { ...newHero(type) };
+    return `<div class="tile ${tk != null ? 'taken' : ''}">
+      <div class="hh"><span class="ic">${H.icon}</span><b>${H.name}</b>${H.caster ? '<span class="tag caster">Caster</span>' : ''}</div>
+      <div class="muted" style="font-size:.85rem">HP ${maxHp(st, fake)}</div>
+      <div class="faces">${H.faces.map(c => faceHtml(st, fake, c)).join('')}</div>
+      <div class="desc">${H.spell ? `<span class="spelltxt">✦ ${spellTip(st, H.spell)}</span>` : 'No spell'}</div>
+      ${tk != null ? `<span class="tag" style="align-self:flex-start;color:${color(tk)}">${tk === me ? 'Yours' : esc(st.pl[tk].name)}</span>` : `<button class="btn sm" data-pick="${type}" ${myPick ? '' : 'disabled'}>Pick</button>`}
+    </div>`;
+  }).join('');
+  const party = p => st.pl[p].party.map(x => `${HEROES[x.type].icon} ${HEROES[x.type].name}`).join(', ') || '—';
+  return `<div class="stack">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div class="stack" style="gap:6px">
+        <h2>${st.mode === 'solo' ? 'Pick your party' : 'Hero draft'}</h2>
+        <p class="muted" style="margin:0">${st.mode === 'solo' ? `Pick 4 of these 8 heroes. ${4 - st.pl[0].party.length} left to pick.` : myPick ? 'Your pick. Snake draft, 4 heroes each.' : `Waiting for ${esc(st.pl[st.order[st.oi]].name)} to pick…`}</p>
+        ${st.mode === 'mp' ? `<div class="order">${orderHtml}</div>` : ''}
+      </div>
+      <div class="themecard"><small>Match theme</small><span class="t">${t.name}</span><div>${t.text}</div></div>
+    </div>
+    <div class="tiles">${tiles}</div>
+    <div class="box"><b style="color:var(--blue)">Your party:</b> ${party(me)}${st.mode === 'mp' ? `<br><b style="color:var(--red)">${esc(st.pl[1 - me].name)}:</b> ${party(1 - me)}` : ''}</div>
+  </div>`;
+}
+
+function battleHtml() {
+  const pm = previewMap(), o = 1 - me, act = st.active, myTurn = act === me;
+  const firstName = st.first === me ? 'You' : esc(st.pl[st.first].name), secondName = st.first === me ? esc(st.pl[o].name) : 'You';
+  const phase = `<div class="phase"><span>Turn ${st.turn}</span><span class="${st.active === st.first ? 'on' : ''}">1 · ${firstName} roll${st.first === me ? '' : 's'} &amp; commit${st.first === me ? '' : 's'}</span><span class="${st.active !== st.first ? 'on' : ''}">2 · ${secondName} respond${st.first === me ? 's' : ''}</span><span>3 · Resolve</span></div>`;
+  let hint = '', buttons = '';
+  if (myTurn && st.step === 'roll') {
+    hint = 'Click dice to keep them, then reroll the rest. Or finish rolling now.';
+    buttons = `<button class="btn" data-ui="reroll" ${st.rerolls > 0 ? '' : 'disabled'}>Reroll unkept (${st.rerolls} left)</button><button class="btn ghost" data-ui="done">Done rolling</button>`;
+  } else if (myTurn) {
+    hint = ui.sel != null ? 'Now click a highlighted target: a hero card or a life box.' : 'Every die has a default target. Click a die to change it, cast ✦ spells, then commit.';
+    if (st.committed[o]) hint += ` ${esc(st.pl[o].name)} already committed, so you can see everything coming.`;
+    buttons = `<button class="btn" data-ui="commit">${st.first === me ? 'Commit' : 'Commit and resolve'}</button>${ui.sel != null ? '<button class="btn ghost" data-ui="desel">Cancel</button>' : ''}`;
+  } else hint = `${esc(st.pl[act].name)} is ${st.step === 'roll' ? 'rolling' : 'choosing targets'}…`;
+  const logRows = st.last.map(l => `<tr><td style="color:${color(l.p)}">${esc(l.src)}</td><td>${esc(l.tgt)}</td><td>${esc(l.res)}</td></tr>`).join('');
+  return `
+    ${sideHtml(o, pm)}
+    <div class="center">
+      ${phase}
+      ${st.msg ? `<div class="banner">${esc(st.msg)}</div>` : ''}
+      <div class="hint">${hint}</div>
+      <div class="row" style="justify-content:center;min-height:2.2rem">${buttons}</div>
+    </div>
+    ${sideHtml(me, pm)}
+    <div class="log box">${st.last.length ? `<h3 style="font-size:1rem;margin-bottom:4px">Turn ${st.lastTurn} results <span class="muted" style="font-size:.8rem">shields, then damage, then heals</span></h3><table><tr><th>Die</th><th>Target</th><th>Result</th></tr>${logRows}</table>` : '<span class="muted">Results of each turn show up here. All dice resolve together: shields first, then damage, then heals.</span>'}</div>`;
+}
+
+function rewardDesc(r) {
+  if (r.k === 'lvl') return { icon:'⬆', name:'Level up', tag:'Level-up', text:'+2 max HP and upgrade one face on any one of your heroes. A blank becomes ⚔1; any other face gets +1.' };
+  if (r.k === 'item') return { icon: ITEMS[r.id].icon, name: ITEMS[r.id].name, tag:'Item · any hero', text: ITEMS[r.id].text };
+  return { icon: RELICS[r.id].icon, name: RELICS[r.id].name, tag:'Relic · party', text: RELICS[r.id].text };
+}
+function rewardHtml() {
+  const myPick = st.rorder[st.ri] === me, re = st.roundEnd;
+  const won = re && re.w === me;
+  const head = st.mode === 'solo' ? `Wave ${st.round} cleared!` : `${won ? 'You won' : esc(st.pl[re.w].name) + ' won'} round ${re.round}`;
+  const sub = st.mode === 'solo' ? 'Pick one reward.' : `The loser picks first, then the winner picks from what's left. ${myPick ? '<b>Your pick.</b>' : `Waiting for ${esc(st.pl[st.rorder[st.ri]].name)}…`}`;
+  const tiles = st.rewards.map((r, i) => {
+    const d = rewardDesc(r);
+    return `<div class="tile ${r.by != null ? 'taken' : ''} ${ui.pend === i ? 'picked' : ''}">
+      <div class="hh"><span class="ic">${d.icon}</span><b>${d.name}</b></div>
+      <span class="tag" style="align-self:flex-start">${d.tag}</span>
+      <div class="desc">${d.text}</div>
+      ${r.by != null ? `<span class="tag" style="align-self:flex-start;color:${color(r.by)}">${r.by === me ? 'You took' : esc(st.pl[r.by].name) + ' took'}</span>` : `<button class="btn sm" data-take="${i}" ${myPick ? '' : 'disabled'}>Take</button>`}
+    </div>`;
+  }).join('');
+  let chooser = '';
+  if (myPick && ui.pend != null && st.rewards[ui.pend] && st.rewards[ui.pend].by == null) {
+    const r = st.rewards[ui.pend], P = st.pl[me];
+    if (r.k === 'lvl') chooser = `<div class="box stack"><h3>Level up: click the face to upgrade</h3><div class="tiles">${P.party.map((x, h) => `<div class="tile"><div class="hh"><span class="ic">${HEROES[x.type].icon}</span><b>${HEROES[x.type].name}</b></div><div class="muted" style="font-size:.85rem">HP ${maxHp(st, x)} → ${maxHp(st, x) + 2}</div><div class="faces facepick">${x.faces.map((c, f) => rawFaceHtml(c, '', `data-lvl="${h}" data-f="${f}"`)).join('')}</div></div>`).join('')}</div><div><button class="btn ghost sm" data-ui="unpend">Cancel</button></div></div>`;
+    else if (r.k === 'item') chooser = `<div class="box stack"><h3>Equip ${ITEMS[r.id].name} on which hero?</h3><div class="tiles">${P.party.map((x, h) => `<div class="tile"><div class="hh"><span class="ic">${HEROES[x.type].icon}</span><b>${HEROES[x.type].name}</b></div><div class="faces">${x.faces.map(c => faceHtml(st, x, c)).join('')}</div><div class="desc">${x.item ? `Has ${ITEMS[x.item].icon} ${ITEMS[x.item].name} (goes to your bag)` : 'Empty item slot'}</div><button class="btn sm" data-equip="${h}">Equip here</button></div>`).join('')}</div><div><button class="btn ghost sm" data-ui="unpend">Cancel</button></div></div>`;
+  }
+  return `<div class="stack">
+    <div><h2>${head}</h2><p class="muted" style="margin:4px 0 0">${sub}</p></div>
+    <div class="tiles">${tiles}</div>
+    ${chooser}
+    ${partyPanel(false)}
+  </div>`;
+}
+function partyPanel(editable) {
+  const P = st.pl[me];
+  const slot = (s, item) => `<button class="slot ${item ? 'full' : ''} ${ui.swapSel === s ? 'sel' : ''}" ${editable ? `data-slot="${s}"` : 'disabled'} ${item ? `data-tip="${esc(ITEMS[item].text)}"` : ''}>${item ? ITEMS[item].icon + ' ' + ITEMS[item].name : 'Empty slot'}</button>`;
+  return `<div class="box stack"><h3>Your party</h3>
+    ${editable ? '<p class="muted" style="margin:0;font-size:.85rem">To move an item, click it, then click another hero\'s slot (or the bag).</p>' : ''}
+    <div class="tiles">${P.party.map((x, h) => `<div class="tile"><div class="hh"><span class="ic">${HEROES[x.type].icon}</span><b>${HEROES[x.type].name}</b>${x.lvl > 1 ? `<span class="lv" style="color:var(--gold);font-size:.75rem">Lv${x.lvl}</span>` : ''}</div><div class="muted" style="font-size:.85rem">HP ${maxHp(st, x)}</div><div class="faces">${x.faces.map(c => faceHtml(st, x, c)).join('')}</div><div class="desc">${spellsOf(x).map(s => `<span class="spelltxt">✦ ${spellTip(st, s)}</span>`).join('<br>') || 'No spell'}</div>${slot('h' + h, x.item)}</div>`).join('')}</div>
+    ${P.bag.length || editable ? `<div class="row"><b>Bag:</b> ${P.bag.map((it, i) => slot('b' + i, it)).join(' ')} ${editable ? slot('b' + P.bag.length, null) : ''}</div>` : ''}
+    ${P.relics.length ? `<div class="row"><b>Relics:</b> ${P.relics.map(r => `<span class="chip" data-tip="${esc(RELICS[r].text)}">${RELICS[r].icon} ${RELICS[r].name}</span>`).join(' ')}</div>` : ''}
+  </div>`;
+}
+function prepHtml() {
+  const P = st.pl[me], O = st.pl[1 - me];
+  let ready;
+  if (st.mode === 'solo') ready = `<button class="btn" data-ready="1">Start wave ${st.round + 1}</button>`;
+  else if (P.ready) ready = `<span class="muted">You're ready. Waiting for ${esc(O.name)}…</span>`;
+  else if (st.chooser === me) ready = `<span class="muted">You lost the round, so you choose who starts:</span><button class="btn" data-ready="${me}">Ready: I go first</button><button class="btn ghost" data-ready="${1 - me}">Ready: ${esc(O.name)} goes first</button>`;
+  else ready = `<button class="btn" data-ready="-1">Ready</button><span class="muted">${esc(O.name)} lost the round and chooses who starts.</span>`;
+  return `<div class="stack">
+    <div><h2>Get ready for ${st.mode === 'solo' ? 'wave' : 'round'} ${st.round + 1}</h2><p class="muted" style="margin:4px 0 0">Life next round: ${Math.max(4, 10 + 2 * (st.round + 1) - (st.theme === 'short' ? 4 : 0))}. Heroes return at full HP and mana resets.${st.mode === 'mp' ? ` ${O.ready ? esc(O.name) + ' is ready.' : ''}` : ''}</p></div>
+    <div class="row">${ready}</div>
+    ${partyPanel(true)}
+  </div>`;
+}
+function overHtml() {
+  let head, sub, buttons;
+  if (st.mode === 'solo') {
+    if (st.result === 'won') { head = 'Victory! All 5 waves cleared.'; sub = 'Your party chopped through every rival band.'; buttons = '<button class="btn" data-ui="solo">New run</button><button class="btn ghost" data-ui="leave">Menu</button>'; }
+    else { head = `Defeated on wave ${st.round}`; sub = `${esc(st.pl[1].name)} won this one.`; buttons = `<button class="btn" data-ui="retry">Retry wave ${st.round}</button><button class="btn ghost" data-ui="solo">New run</button><button class="btn ghost" data-ui="leave">Menu</button>`; }
+  } else {
+    const w = st.result; head = w === me ? 'You win the duel!' : `${esc(st.pl[w].name)} wins the duel`;
+    sub = `Final score ${st.score[me]} – ${st.score[1 - me]}.`;
+    buttons = net.role === 'host' ? '<button class="btn" data-ui="rematch">Rematch</button><button class="btn ghost" data-ui="leave">Leave</button>' : '<button class="btn" data-ui="rematch">Ask for a rematch</button><button class="btn ghost" data-ui="leave">Leave</button>';
+  }
+  const logRows = st.last.map(l => `<tr><td style="color:${color(l.p)}">${esc(l.src)}</td><td>${esc(l.tgt)}</td><td>${esc(l.res)}</td></tr>`).join('');
+  return `<div class="stack" style="align-items:center;text-align:center;margin-top:20px">
+    ${logoBig()}
+    <h2>${head}</h2><p class="muted" style="margin:0">${sub}</p>
+    <div class="row" style="justify-content:center">${buttons}</div>
+    ${logRows ? `<div class="log box" style="width:100%"><h3 style="font-size:1rem">Final turn</h3><table><tr><th>Die</th><th>Target</th><th>Result</th></tr>${logRows}</table></div>` : ''}
+  </div>`;
+}
+
+// ================= LOGO =================
+function logoSvg(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="14" width="36" height="36" rx="8" fill="#ebe6d9" stroke="#cfc6b0" stroke-width="2" transform="rotate(-12 30 32)"/><g fill="#151925" transform="rotate(-12 30 32)"><circle cx="21" cy="23" r="3.6"/><circle cx="30" cy="32" r="3.6"/><circle cx="39" cy="41" r="3.6"/></g><path d="M8 56 L56 8" stroke="#e2654f" stroke-width="5" stroke-linecap="round"/><path d="M44 6 L58 6 L58 20 Z" fill="#dba84a"/></svg>`;
+}
+function logoBig() {
+  return `<svg width="340" height="120" viewBox="0 0 340 120" role="img" aria-label="Stop Chop and Roll"><g transform="translate(6,20) scale(1.25)">${logoSvg(64).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g><text x="100" y="52" font-family="Alegreya Sans SC, Trebuchet MS, sans-serif" font-weight="800" font-size="38" fill="#dba84a">Stop Chop</text><text x="100" y="92" font-family="Alegreya Sans SC, Trebuchet MS, sans-serif" font-weight="800" font-size="38" fill="#ebe6d9">and Roll</text></svg>`;
+}
+
+// ================= HELP =================
+function showHelp() {
+  const o = $('overlay');
+  const rows = Object.entries(FACE).map(([k, F]) => `<tr><td>${rawFaceHtml(k === 'B' ? 'B' : k + '2')}</td><td><b>${F.name}</b></td><td>${F.text('N').replace('N', 'N')}</td></tr>`).join('');
+  const sp = Object.values(SPELLS).map(s => `<tr><td>✦ ${s.cost}</td><td><b>${s.name}</b></td><td>${s.text}</td></tr>`).join('');
+  o.innerHTML = `<div class="box">
+    <div class="row" style="justify-content:space-between">${logoBig()}<button class="btn ghost" data-ui="closehelp">Close</button></div>
+    <h3>How to play</h3>
+    <ul>
+      <li>Each hero is one six-sided die. You and your rival each have a <b>life total</b>: 12 in round 1, then 14, 16, 18 and 20.</li>
+      <li><b>Turns alternate.</b> One player rolls, keeps and rerolls (2 rerolls), then gives every die a target and commits, in the open. The other player then rolls and responds, seeing exactly what's coming. Next turn, the other player goes first.</li>
+      <li>All committed dice <b>resolve together</b>: shields first, then damage, then heals. A hero killed this turn still uses its die.</li>
+      <li>Damage can hit an enemy hero or the enemy player's life. <b>Race or control:</b> chop their life to end the round, or kill heroes so they stop rolling.</li>
+      <li>You lose a round at 0 life, or when all your heroes are down. Heroes come back at full HP next round.</li>
+      <li><b>Mana</b> faces fill your party pool for the round. Spend it on spells (casters always have one; a few others do too). A spell is cast in addition to that hero's die.</li>
+      <li><b>Between rounds</b> pick rewards: level-ups (+2 max HP and upgrade one face), items (one per hero, movable between rounds) and rare relics.</li>
+      <li><b>Single player:</b> beat 5 rival parties in a row; each one has as many upgrades as you. <b>Duel:</b> best of 5, first to 3; the loser picks a reward first and chooses who starts.</li>
+    </ul>
+    <h3>Faces</h3><table>${rows}</table>
+    <h3>Spells</h3><table>${sp}</table>
+    <p class="muted" style="font-size:.85rem">Hover any face, spell, item or relic for details. Your solo run autosaves.</p>
+  </div>`;
+  o.classList.remove('hidden');
+}
+function showText(title, text, onOk) {
+  const o = $('overlay');
+  o.innerHTML = `<div class="box"><h3>${esc(title)}</h3><textarea id="saveTxt">${esc(text)}</textarea><div class="row">${onOk ? '<button class="btn" data-ui="importok">Import</button>' : ''}<button class="btn ghost" data-ui="closehelp">Close</button><span id="saveErr" class="err"></span></div></div>`;
+  o.classList.remove('hidden'); ui.onImport = onOk;
+}
+
+// ================= INPUT =================
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-ui],[data-pick],[data-die],[data-cast],[data-tp],[data-take],[data-lvl],[data-equip],[data-slot],[data-ready],[data-dev]');
+  if (!el) return;
+  ac();
+  const d = el.dataset;
+  if (d.ui) return uiAction(d.ui);
+  if (d.dev) {
+    if (d.dev === 'mana') st.pl[me].mana += 5;
+    else endRound(st, d.dev === 'win' ? [me === 1, me === 0] : [me === 0, me === 1]);
+    return afterChange();
+  }
+  if (d.pick) { sfx.pick(); return dispatch({ t:'pick', type: d.pick }); }
+  if (d.die != null && +d.p === me && st.phase === 'battle' && st.active === me) {
+    if (st.step === 'roll') { sfx.click(); return dispatch({ t:'keep', i: +d.die }); }
+    ui.sel = ui.sel === +d.die ? null : +d.die; return render();
+  }
+  if (d.cast != null) { sfx.mana(); return dispatch({ t:'cast', h: +d.cast, s: d.s }); }
+  const card = e.target.closest('[data-tp]');   // a click anywhere on a hero card or life box can target it
+  if (card && ui.sel != null && canTarget(+card.dataset.tp, +card.dataset.th)) {
+    const i = ui.sel; ui.sel = null; sfx.click();
+    return dispatch({ t:'target', i, tg: { p: +card.dataset.tp, h: +card.dataset.th } });
+  }
+  if (d.take != null) {
+    const r = st.rewards[+d.take];
+    if (r.k === 'relic') { sfx.pick(); return dispatch({ t:'take', i: +d.take }); }
+    ui.pend = +d.take; return render();
+  }
+  if (d.lvl != null) { const i = ui.pend; ui.pend = null; sfx.pick(); return dispatch({ t:'take', i, h: +d.lvl, f: +d.f }); }
+  if (d.equip != null) { const i = ui.pend; ui.pend = null; sfx.pick(); return dispatch({ t:'take', i, h: +d.equip }); }
+  if (d.slot) {
+    if (ui.swapSel == null) { ui.swapSel = d.slot; return render(); }
+    const a = ui.swapSel; ui.swapSel = null;
+    if (a === d.slot) return render();
+    sfx.click(); return dispatch({ t:'swap', a, b: d.slot });
+  }
+  if (d.ready != null) { const s = +d.ready; return dispatch({ t:'ready', starter: s >= 0 ? s : undefined }); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'nameIn') store.set('scr-name', e.target.value.trim().slice(0, 14));
+  if (e.target.id === 'codeIn') ui.joinCode = e.target.value.toUpperCase();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { $('overlay').classList.add('hidden'); if (ui.sel != null) { ui.sel = null; render(); } }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.die.mine')) { e.preventDefault(); e.target.click(); }
+  if (e.key === 'Enter' && e.target.id === 'codeIn') uiAction('join');
+});
+function uiAction(k) {
+  switch (k) {
+    case 'solo':
+      teardown(); st = newMatch('solo', [myName(), 'Rivals'], (Math.random() * 2 ** 31) | 0); st.bandOff = ri(st, BANDS.length);
+      me = 0; screen = 'game'; ui.err = ''; renderCache.sig = null; afterChange(); break;
+    case 'continue': try { st = JSON.parse(store.get(SAVE_KEY)); me = 0; screen = 'game'; renderCache.sig = null; afterChange(); } catch { ui.err = 'Could not load the save.'; render(); } break;
+    case 'export': showText('Export save', exportSave()); break;
+    case 'import': showText('Paste a save', '', true); break;
+    case 'importok': try { importSave($('saveTxt').value); $('overlay').classList.add('hidden'); render(); } catch (err) { $('saveErr').textContent = err.message; } break;
+    case 'host': ui.joinCode = ''; startHost(); break;
+    case 'join': startJoin(ui.joinCode || ($('codeIn') && $('codeIn').value)); break;
+    case 'leave':
+      if (st && st.mode === 'solo') saveSolo();
+      if (net.role === 'host' || net.role === 'client' || net.peer) endSession('');
+      else { clearTimeout(aiTimer); st = null; screen = 'menu'; ui.err = ''; render(); }
+      break;
+    case 'help': showHelp(); break;
+    case 'closehelp': $('overlay').classList.add('hidden'); break;
+    case 'mute': muted = !muted; store.set('scr-mute', muted ? '1' : '0'); applyVol(); render(); break;
+    case 'music': musicOn = !musicOn; store.set('scr-music', musicOn ? '1' : '0'); applyVol(); render(); break;
+    case 'reroll': dispatch({ t:'reroll' }); break;
+    case 'done': dispatch({ t:'done' }); break;
+    case 'commit': ui.sel = null; dispatch({ t:'commit' }); break;
+    case 'desel': ui.sel = null; render(); break;
+    case 'unpend': ui.pend = null; render(); break;
+    case 'retry': {
+      const s = JSON.parse(st.snap); s.snap = st.snap; s.seed = (Math.random() * 2 ** 31) | 0;
+      st = s; startTurn(st, st.first); renderCache.sig = null; afterChange(); break;
+    }
+    case 'rematch':
+      if (net.role === 'host') hostRematch();
+      else if (net.conn && net.conn.open) { net.conn.send({ t:'rematch' }); ui.err = 'Asked the host for a rematch.'; render(); }
+      break;
+  }
+}
+
+// tooltips
+const tipEl = $('tip');
+document.addEventListener('mouseover', e => {
+  const t = e.target.closest('[data-tip]');
+  if (!t) { tipEl.style.display = 'none'; return; }
+  tipEl.textContent = t.dataset.tip; tipEl.style.display = 'block';
+});
+document.addEventListener('mousemove', e => {
+  if (tipEl.style.display !== 'block') return;
+  const x = Math.min(e.clientX + 14, innerWidth - tipEl.offsetWidth - 8), y = e.clientY + 18 + tipEl.offsetHeight > innerHeight ? e.clientY - tipEl.offsetHeight - 10 : e.clientY + 18;
+  tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px';
+});
+document.addEventListener('focusin', e => {
+  const t = e.target.closest('[data-tip]'); if (!t) return;
+  const r = t.getBoundingClientRect(); tipEl.textContent = t.dataset.tip; tipEl.style.display = 'block';
+  tipEl.style.left = Math.min(r.left, innerWidth - tipEl.offsetWidth - 8) + 'px'; tipEl.style.top = (r.bottom + 6) + 'px';
+});
+document.addEventListener('focusout', () => tipEl.style.display = 'none');
+
+// expose for testing / playtest harness
+window.SCR = { get st() { return st; }, act, aiNext, newMatch, beginRound, dispatch, uiAction, RULES };
+render();
+</script>
+</body>
+</html>
